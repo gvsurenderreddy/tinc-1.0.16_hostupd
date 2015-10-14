@@ -39,16 +39,24 @@
 #include "xalloc.h"
 
 bool send_id(connection_t *c) {
-	return send_request(c, "%d %s %d", ID, myself->connection->name,
-						myself->connection->protocol_version);
+	return send_request(c, "%d %s %s %d",
+		ID, netname ? netname : "<noname>", myself->connection->name,
+			myself->connection->protocol_version);
 }
 
 bool id_h(connection_t *c) {
-	char name[MAX_STRING_SIZE];
+	char peernetname[MAX_STRING_SIZE], name[MAX_STRING_SIZE];
 
-	if(sscanf(c->buffer, "%*d " MAX_STRING " %d", name, &c->protocol_version) != 2) {
+	if(sscanf(c->buffer, "%*d " MAX_STRING " " MAX_STRING " %d",
+		peernetname, name, &c->protocol_version) != 3) {
 		logger(LOG_ERR, "Got bad %s from %s (%s)", "ID", c->name,
 			   c->hostname);
+		return false;
+	}
+
+	if (strcmp(peernetname, netname) && strcmp(netname, "<noname>")) {
+		logger(LOG_ERR, "Peer %s (%s) is from another network %s",
+			c->name, c->hostname, peernetname);
 		return false;
 	}
 

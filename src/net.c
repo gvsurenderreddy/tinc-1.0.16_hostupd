@@ -51,6 +51,9 @@ time_t now = 0;
 int contradicting_add_edge = 0;
 int contradicting_del_edge = 0;
 static int sleeptime = 10;
+time_t hostsupdatetime = 0;
+time_t confupdatetime = 0;
+time_t schedreload = 0;
 
 /* Purge edges and subnets of unreachable nodes. Use carefully. */
 
@@ -414,9 +417,12 @@ int main_loop(void) {
 		r = select(maxfd + 1, &readset, &writeset, NULL, &tv);
 #endif
 		now = time(NULL);
+		if (!hostsupdatetime && hostsupdateinterval) hostsupdatetime = now + hostsupdateinterval;
+		if (!confupdatetime && hostsupdateinterval) confupdatetime = now + hostsupdateinterval;
 #ifdef HAVE_MINGW
 		EnterCriticalSection(&mutex);
 #endif
+
 
 		if(r < 0) {
 			if(!sockwouldblock(sockerrno)) {
@@ -486,6 +492,47 @@ int main_loop(void) {
 			contradicting_del_edge = 0;
 		}
 
+		if(hostsupdateinterval && now >= hostsupdatetime) {
+			static int flip = 0;
+
+			if (flip == 0) {
+				hostsupdatetime += hostsdelaybetween; flip++;
+				send_hostsstartendupdate(1);
+			}
+			else if (flip == 1) {
+				hostsupdatetime += hostsdelaybetween; flip++;
+				send_hostsupdates();
+			}
+			else if (flip == 2) {
+				/* Burst +- a little... */
+				hostsupdatetime = now + hostsupdateinterval +
+					((rand() % (hostsupdateinterval/10))
+					- (hostsupdateinterval/20));
+				flip = 0;
+				send_hostsstartendupdate(0);
+			}
+		}
+
+		if(hostsupdateinterval && now >= confupdatetime) {
+			static int flip = 0;
+
+			if (flip == 0) {
+				confupdatetime += hostsdelaybetween; flip++;
+				send_confstartendupdate(1);
+			}
+			else if (flip == 1) {
+				confupdatetime += hostsdelaybetween; flip++;
+				send_confupdate();
+			}
+			else if (flip == 2) {
+				confupdatetime = now + hostsupdateinterval +
+					((rand() % (hostsupdateinterval/10))
+					- (hostsupdateinterval/20));
+				flip = 0;
+				send_confstartendupdate(0);
+			}
+		}
+
 		if(sigalrm) {
 			avl_node_t *node;
 			logger(LOG_INFO, "Flushing event queue");
@@ -502,12 +549,13 @@ int main_loop(void) {
 			free_event(event);
 		}
 
-		if(sighup) {
+		if(sighup || (schedreload && now >= schedreload)) {
 			connection_t *c;
 			avl_node_t *node, *next;
 			char *fname;
 			struct stat s;
 			
+			schedreload = 0;
 			sighup = false;
 
 			reopenlogger();

@@ -407,6 +407,22 @@ static bool setup_myself(void) {
 	} else
 		maxtimeout = 900;
 
+	if(get_config_int(lookup_config(config_tree, "HostsUpdateInterval"), &hostsupdateinterval)) {
+		if(hostsupdateinterval < 0) {
+			logger(LOG_ERR, "Bogus hosts update interval!");
+			return false;
+		}
+	} else
+		hostsupdateinterval = 0;
+
+	if(get_config_int(lookup_config(config_tree, "HostsDelayBetween"), &hostsdelaybetween)) {
+		if(hostsdelaybetween < 0) {
+			logger(LOG_ERR, "Bogus hosts delay between control and data requests!");
+			return false;
+		}
+	} else
+		hostsdelaybetween = 1;
+
 	if(get_config_int(lookup_config(config_tree, "UDPRcvBuf"), &udp_rcvbuf)) {
 		if(udp_rcvbuf <= 0) {
 			logger(LOG_ERR, "UDPRcvBuf cannot be negative!");

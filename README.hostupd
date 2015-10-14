@@ -1,0 +1,18 @@
+Hosts update protocol extension permits tinc to update hosts files and partially configuration
+distributely and securely. It does not depend on external service such as ssh or https, so doing
+any update work inside tinc protocol, by tinc daemon itself.
+
+hostupd patch is Copyright (C) LynxLynx <lynx@lynxlynx.tk> - licensed under GNU GPL v2 _ONLY_
+(no "or any later version" clause is permitted to apply). Work done by others merged in single
+source file is copyrighted by program license stated in COPYING file or source file comments.
+
+WARNING! This tinc will NOT be able to connect to unpatched versions even of same version -
+due to changed protocol version number and certain request formats were added or changed.
+
+To completely protect your network, you should apply a patch for CVE-2013-1428. We using this old
+and patched version of tinc for certain reasons. If you will decide to go with newer 1.0.x tincs,
+I believe this patch can safely be applied to them.
+
+For detailed explanation of how this extension works, look into src/protocol_hostsupdate.c
+
+- Lynx, Oct2015

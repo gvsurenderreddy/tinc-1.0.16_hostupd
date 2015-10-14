@@ -25,7 +25,7 @@
    incompatible version have different protocols.
  */
 
-#define PROT_CURRENT 17
+#define PROT_CURRENT 18
 
 /* Silly Windows */
 
@@ -44,6 +44,7 @@ typedef enum request_t {
 	ADD_EDGE, DEL_EDGE,
 	KEY_CHANGED, REQ_KEY, ANS_KEY,
 	PACKET,
+	HOSTUPDATE, CONFUPDATE,
 	LAST						/* Guardian for the highest request number */
 } request_t;
 
@@ -56,12 +57,12 @@ extern bool tunnelserver;
 extern bool strictsubnets;
 
 /* Maximum size of strings in a request.
- * scanf terminates %2048s with a NUL character,
- * but the NUL character can be written after the 2048th non-NUL character.
+ * scanf terminates %4095s with a NUL character,
+ * but the NUL character can be written after the 4096th non-NUL character.
  */
 
-#define MAX_STRING_SIZE 2049
-#define MAX_STRING "%2048s"
+#define MAX_STRING_SIZE 4096
+#define MAX_STRING "%4095s"
 
 #include "edge.h"
 #include "net.h"
@@ -100,6 +101,10 @@ extern void send_key_changed(void);
 extern bool send_req_key(struct node_t *);
 extern bool send_ans_key(struct node_t *);
 extern bool send_tcppacket(struct connection_t *, const struct vpn_packet_t *);
+extern void send_hostsstartendupdate(int start);
+extern void send_hostsupdates(void);
+extern void send_confstartendupdate(int start);
+extern void send_confupdate(void);
 
 /* Request handlers  */
 
@@ -121,5 +126,9 @@ extern bool key_changed_h(struct connection_t *);
 extern bool req_key_h(struct connection_t *);
 extern bool ans_key_h(struct connection_t *);
 extern bool tcppacket_h(struct connection_t *);
+extern bool hostupdate_h(struct connection_t *c);
+extern bool deadhost_h(struct connection_t *c);
+extern bool endhostupdate_h(struct connection_t *c);
+extern bool confupdate_h(struct connection_t *c);
 
 #endif							/* __TINC_PROTOCOL_H__ */

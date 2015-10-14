@@ -40,6 +40,8 @@ int pingtimeout = 0;			/* seconds to wait for response */
 char *confbase = NULL;			/* directory in which all config files are */
 char *netname = NULL;			/* name of the vpn network */
 list_t *cmdline_conf = NULL;	/* global/host configuration values given at the command line */
+int hostsupdateinterval = 0;		/* seconds between hosts files broadcasting */
+int hostsdelaybetween = 0;		/* seconds between delays from control to data requests */
 
 
 static int config_compare(const config_t *a, const config_t *b) {

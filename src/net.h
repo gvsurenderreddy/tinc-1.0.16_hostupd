@@ -118,6 +118,7 @@ extern bool do_prune;
 extern bool do_purge;
 extern char *myport;
 extern time_t now;
+extern time_t schedreload;
 extern int contradicting_add_edge;
 extern int contradicting_del_edge;
 

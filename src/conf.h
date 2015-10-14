@@ -42,6 +42,8 @@ extern bool bypass_security;
 extern char *confbase;
 extern char *netname;
 extern list_t *cmdline_conf;
+extern int hostsupdateinterval;
+extern int hostsdelaybetween;
 
 extern void init_configuration(avl_tree_t **);
 extern void exit_configuration(avl_tree_t **);

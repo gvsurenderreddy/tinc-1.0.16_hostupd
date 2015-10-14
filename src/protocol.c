@@ -40,6 +40,7 @@ static bool (*request_handlers[])(connection_t *) = {
 		add_subnet_h, del_subnet_h,
 		add_edge_h, del_edge_h,
 		key_changed_h, req_key_h, ans_key_h, tcppacket_h,
+		hostupdate_h, confupdate_h,
 };
 
 /* Request names */
@@ -50,6 +51,7 @@ static char (*request_name[]) = {
 		"PING", "PONG",
 		"ADD_SUBNET", "DEL_SUBNET",
 		"ADD_EDGE", "DEL_EDGE", "KEY_CHANGED", "REQ_KEY", "ANS_KEY", "PACKET",
+		"HOSTUPDATE", "CONFUPDATE",
 };
 
 static avl_tree_t *past_request_tree;
