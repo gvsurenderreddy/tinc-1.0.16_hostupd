@@ -218,18 +218,24 @@ _done:
 	return true;
 }
 
-static void EVP_sign(RSA *rsa, const char *data, size_t l, char *outsig, size_t *sigl) {
+static bool EVP_sign(RSA *rsa, const char *data, size_t l, char *outsig, size_t *sigl) {
 	EVP_MD_CTX ctx;
 	EVP_PKEY *pkey;
+	bool ret = false;
 
 	pkey = EVP_PKEY_new();
-	EVP_PKEY_set1_RSA(pkey, rsa);
+	if (!pkey) return false;
+
+	if (!EVP_PKEY_set1_RSA(pkey, rsa)) goto _fail;
 
 	EVP_SignInit(&ctx, EVP_sha256());
-	EVP_SignUpdate(&ctx, data, l);
-	EVP_SignFinal(&ctx, outsig, sigl, pkey);
+	if (!EVP_SignUpdate(&ctx, data, l)) goto _fail;
+	if (!EVP_SignFinal(&ctx, outsig, sigl, pkey)) goto _fail;
 
-	EVP_PKEY_free(pkey);
+	ret = true;
+
+_fail:	EVP_PKEY_free(pkey);
+	return ret;
 }
 
 static bool EVP_verify(RSA *rsa, const char *sign, size_t sigl, const char *data, size_t l) {
@@ -238,13 +244,15 @@ static bool EVP_verify(RSA *rsa, const char *sign, size_t sigl, const char *data
 	bool ret = false;
 
 	pkey = EVP_PKEY_new();
-	EVP_PKEY_set1_RSA(pkey, rsa);
+	if (!pkey) return ret;
+
+	if (!EVP_PKEY_set1_RSA(pkey, rsa)) goto _fail;
 
 	EVP_VerifyInit(&ctx, EVP_sha256());
-	EVP_VerifyUpdate(&ctx, data, l);
+	if (!EVP_VerifyUpdate(&ctx, data, l)) goto _fail;
 	if (EVP_VerifyFinal(&ctx, sign, sigl, pkey) == 1) ret = true;
 
-	EVP_PKEY_free(pkey);
+_fail:	EVP_PKEY_free(pkey);
 
 	return ret;
 }
@@ -263,14 +271,22 @@ void send_hostsstartendupdate(int start) {
 	/* Start update session */
 	dlen = RSA_size(myself->connection->rsa_key);
 	if (dlen > sizeof(rawdgst)/2) {
-		logger(LOG_ERR, "Could not start hosts update session due to digest overflow");
+		logger(LOG_ERR, "Could not %s hosts update session due to digest overflow",
+		start ? "start" : "end");
+
 		return;
 	}
 
 	snprintf(rawhost, sizeof(rawhost), "%s %s %s 0 %d",
 		myself->name, myself->name, start ? "START" : "END", dlen);
 	rlen = strlen(rawhost);
-	EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen);
+	if (!EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen)) {
+		logger(LOG_ERR,
+		"Could not %s hosts update session due to signing error (probably OOM)",
+		start ? "start" : "end");
+
+		return;
+	}
 	if (base64_enclen(dlen) >= MAX_STRING_SIZE) {
 		logger(LOG_ERR,
 		"Could not %s hosts update session, base64 digest overflow",
@@ -312,6 +328,7 @@ void send_hostsupdates(void) {
 	free(dname);
 	if(!dir) return;
 
+	/* I hope receiving node can accept and write updates quickly enough. */
 	while((ent = readdir(dir))) {
 		if(!check_id(ent->d_name))
 			continue;
@@ -338,7 +355,13 @@ void send_hostsupdates(void) {
 			myself->name, ent->d_name, b64host, slen, dlen);
 		
 		rlen = strlen(rawhost);
-		EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen);	
+		if (!EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen)) {
+			logger(LOG_ERR,
+			"Could not sign update for %s due to signing error (probably OOM)",
+			ent->d_name);
+
+			continue;
+		}
 		if (base64_enclen(dlen) >= MAX_STRING_SIZE) {
 			logger(LOG_WARNING, "Digest for host file %s too long to send", fname);
 			free(fname);
@@ -367,7 +390,13 @@ void send_hostsupdates(void) {
 			snprintf(rawhost, sizeof(rawhost), "%s %s DEAD 0 %d",
 				myself->name, ent->d_name, dlen);
 			rlen = strlen(rawhost);
-			EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen);
+			if (!EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen)) {
+				logger(LOG_ERR,
+				"Could not sign dead for %s due to signing error (probably OOM)",
+				ent->d_name);
+
+				continue;
+			}
 			if (base64_enclen(dlen) >= MAX_STRING_SIZE) {
 				logger(LOG_ERR, "Digest for dead host file %s too long to send",
 					ent->d_name);
@@ -445,9 +474,7 @@ bool hostupdate_h(connection_t *c) {
 	char *fname;
 	FILE *fp;
 	size_t slen, dlen, rlen;
-	static RSA *updkey;
-
-	if (updkey) { RSA_free(updkey); updkey = NULL; }
+	RSA *updkey;
 
 	/* We ignore host files updates, maybe for reason */
 	if (ignorenetupdates() || ignorehostsupdates()) return true;
@@ -490,8 +517,10 @@ bool hostupdate_h(connection_t *c) {
 		" [which came from %s (%s)]",
 		updname, hosttoupd, c->name, c->hostname);
 
+		RSA_free(updkey);
 		return true;
 	}
+	RSA_free(updkey);
 
 	/* verify the originating node is permitted to send updates */
 _next:	if (dontverifyupdatepermission()) goto _out;
@@ -568,7 +597,7 @@ _out:	if (!isvalidfname(hosttoupd)) {
 	}
 
 	/* Finally write it to disk */
-_write:	fp = fopen(fname, "w");
+_write: fp = fopen(fname, "w");
 	if (!fp) {
 		logger(LOG_ERR, "Unable to write new host file: %s (%s)", fname, strerror(errno));
 		free(fname);
@@ -604,14 +633,22 @@ void send_confstartendupdate(int start) {
 	/* Start update session */
 	dlen = RSA_size(myself->connection->rsa_key);
 	if (dlen > sizeof(rawdgst)/2) {
-		logger(LOG_ERR, "Could not start config update session due to digest overflow");
+		logger(LOG_ERR, "Could not %s config update session due to digest overflow",
+		start ? "start" : "end");
+
 		return;
 	}
 
 	snprintf(rawconf, sizeof(rawconf), "%s %s 0 %d",
 		myself->name, start ? "START" : "END", dlen);
 	rlen = strlen(rawconf);
-	EVP_sign(myself->connection->rsa_key, rawconf, rlen, rawdgst, &dlen);
+	if (!EVP_sign(myself->connection->rsa_key, rawconf, rlen, rawdgst, &dlen)) {
+		logger(LOG_ERR,
+		"Could not %s config update session due to signing error (probably OOM)",
+		start ? "start" : "end");
+
+		return;
+	}
 	if (base64_enclen(dlen) >= MAX_STRING_SIZE) {
 		logger(LOG_ERR,
 		"Could not %s config update session, base64 digest overflow",
@@ -678,7 +715,12 @@ void send_confupdate(void) {
 		free(fname);
 
 		rlen = strlen(rawconf);
-		EVP_sign(myself->connection->rsa_key, rawconf, rlen, rawdgst, &dlen);
+		if (!EVP_sign(myself->connection->rsa_key, rawconf, rlen, rawdgst, &dlen)) {
+			logger(LOG_ERR,
+			"Could not sign config update due to signing error (probably OOM)");
+
+			return;
+		}
 		if (base64_enclen(dlen) >= MAX_STRING_SIZE) {
 			logger(LOG_ERR, "Could not sign config update, base64 digest overflow");
 			return;
@@ -724,9 +766,7 @@ bool confupdate_h(connection_t *c) {
 	FILE *fp;
 	int x;
 	size_t slen, dlen, rlen;
-	static RSA *updkey;
-
-	if (updkey) { RSA_free(updkey); updkey = NULL; }
+	RSA *updkey;
 
 	/* Guard ourselves against updates */
 	if (ignorenetupdates() || ignoreconfupdates()) return true;
@@ -765,8 +805,10 @@ bool confupdate_h(connection_t *c) {
 		" from %s [which came from %s (%s)]",
 		updname, c->name, c->hostname);
 
+		RSA_free(updkey);
 		return true;
 	}
+	RSA_free(updkey);
 
 _next:	if (dontverifyupdatepermission()) goto _out;
 	if(!getconf_bool_node_offline(updname, "ConfFileMaster")) {
