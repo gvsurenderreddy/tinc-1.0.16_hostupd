@@ -57,7 +57,7 @@ extern bool tunnelserver;
 extern bool strictsubnets;
 
 /* Maximum size of strings in a request.
- * scanf terminates %4095s with a NUL character,
+ * scanf terminates %4096s with a NUL character,
  * but the NUL character can be written after the 4096th non-NUL character.
  */
 
