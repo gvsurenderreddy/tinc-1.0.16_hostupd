@@ -491,7 +491,7 @@ static void send_udppacket(node_t *n, vpn_packet_t *origpkt) {
 		priority = origpriority;
 		ifdebug(TRAFFIC) logger(LOG_DEBUG, "Setting outgoing packet priority to %d", priority);
 		if(setsockopt(listen_socket[sock].udp, SOL_IP, IP_TOS, &priority, sizeof(priority)))	/* SO_PRIORITY doesn't seem to work */
-			logger(LOG_ERR, "System call `%s' failed: %s", "setsockopt", strerror(errno));
+			ifdebug(TRAFFIC) logger(LOG_ERR, "System call `%s' failed: %s", "setsockopt", strerror(errno));
 	}
 #endif
 
@@ -502,7 +502,7 @@ static void send_udppacket(node_t *n, vpn_packet_t *origpkt) {
 			if(n->mtu >= origlen)
 				n->mtu = origlen - 1;
 		} else
-			logger(LOG_ERR, "Error sending packet to %s (%s): %s", n->name, n->hostname, sockstrerror(sockerrno));
+			ifdebug(TRAFFIC) logger(LOG_ERR, "Error sending packet to %s (%s): %s", n->name, n->hostname, sockstrerror(sockerrno));
 	}
 
 end:
