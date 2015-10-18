@@ -511,7 +511,7 @@ static void send_everything(connection_t *c) {
 		send_confstartendupdate(c, 1);
 		send_confupdate(c);
 		send_confstartendupdate(c, 0);
-		c->node->sentupdates = 1;
+		if (c->node) c->node->sentupdates = 1;
 	}
 }
 
