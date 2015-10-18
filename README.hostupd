@@ -144,7 +144,7 @@ Dead host marking and removing:
 
 Bootstraping newcoming node:
 
-NeedsNetUpdates = yes | no - set in host file of host to be updated when it will join the network
+"NeedsNetUpdates" = yes | no - set in host file of host to be updated when it will join the network
      for a first time (often with incomplete hosts database).
      Sending node must have permission to update newcomer, so newcomer must connect to
      one of update nodes directly. If node connects indirectly, it will receive full update
