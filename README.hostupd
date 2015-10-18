@@ -14,6 +14,8 @@ security patches, although there maybe other security issues in future.
 It also includes patches to support IPv6 short subnets format in hosts files and my own fixes.
 They are in separate commits, which end with "(patch)".
 
+The repository with full history is available here: https://github.com/siblynx/tinc-1.0.16_hostupd
+
 
 Below is detailed description and user instructions to configure this subsystem for your network:
 
