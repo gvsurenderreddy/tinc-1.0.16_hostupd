@@ -390,7 +390,7 @@ bool read_server_config(void) {
 	if (!myself || !myself->name) return x;
 
 	xasprintf(&fname, "%s/hosts/%s", confbase, myself->name);
-	read_config_options(config_tree, name);
+	read_config_options(config_tree, myself->name);
 	x = read_config_file(config_tree, fname);
 
 	if(!x) {				/* System error: complain */
