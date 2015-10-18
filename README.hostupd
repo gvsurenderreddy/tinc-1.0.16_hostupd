@@ -140,6 +140,16 @@ Dead host marking and removing:
 "DeadHost" = yes | no - set in host file of host to be removed
      (the host file can be kept in hosts directory on master node, it will not be removed)
 
+Bootstraping newcoming node:
+
+NeedsNetUpdates = yes | no - set in host file of host to be updated when it will join the network
+     for a first time (often with incomplete hosts database).
+     Sending node must have permission to update newcomer, so newcomer must connect to
+     one of update nodes directly. If node connects indirectly, it will receive full update
+     when one of network master nodes will sent it periodically.
+     You should not connect newcomer to more than one master nodes, otherwise an interference
+     in requests will occur and this state was not tested at all.
+
 Authentication tests (tinc.conf):
 
 "DontVerifyUpdateSignature" = yes | no (no) - bypass signature test
