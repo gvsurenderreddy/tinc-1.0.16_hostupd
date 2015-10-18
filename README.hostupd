@@ -9,9 +9,10 @@ source file is copyrighted by program license stated in COPYING file or source f
 WARNING! This tinc will NOT be able to connect to unpatched versions even of same version -
 due to changed protocol version number and certain request formats were added or changed.
 
-To completely protect your network, you should apply a patch for CVE-2013-1428. We using this old
-and patched version of tinc for certain reasons. If you will decide to go with newer 1.0.x tincs,
-I believe this patch can safely be applied to them.
+This tinc distribution already includes a fix for CVE-2013-1428. You don't need to apply additional
+security patches, although there maybe other security issues in future.
+It also includes patches to support IPv6 short subnets format in hosts files and my own fixes.
+They are in separate commits, which end with "(patch)".
 
 
 Below is detailed description and user instructions to configure this subsystem for your network:
