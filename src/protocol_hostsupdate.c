@@ -55,7 +55,7 @@ char *strcasestr_local(const char *h, const char *n) {
 
 static void schedulereload(void) {
 	/* TODO: configurable delay? */
-	schedreload = now + 2;
+	schedreload = now + 10;
 }
 
 static void run_script(const char *scriptname) {
@@ -257,16 +257,18 @@ _fail:	EVP_PKEY_free(pkey);
 	return ret;
 }
 
-void send_hostsstartendupdate(int start) {
+void send_hostsstartendupdate(connection_t *c, int start) {
 	char rawhost[MAX_STRING_SIZE];
 	char rawdgst[MAX_STRING_SIZE], b64dgst[MAX_STRING_SIZE];
 	size_t slen, dlen, rlen;
-	bool choice;
+	bool choice = false;
 
 	/* test if we're are authorized to broadcast the data */
-	if(get_config_bool(lookup_config(config_tree, "HostsFilesMaster"), &choice) && !choice) {
-		return;
-	}
+	if(!get_config_bool(lookup_config(config_tree, "HostsFilesMaster"), &choice)) return;
+	if(!choice) return;
+
+	/* bootstrapped node? If we're already sent him updates, do not do that again */
+	if(c->node && c->node->sentupdates) return;
 
 	/* Start update session */
 	dlen = RSA_size(myself->connection->rsa_key);
@@ -295,10 +297,10 @@ void send_hostsstartendupdate(int start) {
 		return;
 	}
 	base64_encode(rawdgst, dlen, b64dgst, sizeof(b64dgst)-1);
-	send_request(broadcast, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
+	send_request(c, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
 }
 
-void send_hostsupdates(void) {
+void send_hostsupdates(connection_t *c) {
 	/* FIXME: Too memory hungry */
 	char rawfile[MAX_STRING_SIZE];
 	char rawhost[MAX_STRING_SIZE], b64host[MAX_STRING_SIZE];
@@ -309,12 +311,13 @@ void send_hostsupdates(void) {
 	DIR *dir; FILE *fp;
 	struct dirent *ent;
 	size_t slen, dlen, rlen;
-	bool choice;
+	bool choice = false;
 
 	/* test if we're are authorized to broadcast the data */
-	if(get_config_bool(lookup_config(config_tree, "HostsFilesMaster"), &choice) && !choice) {
-		return;
-	}
+	if(!get_config_bool(lookup_config(config_tree, "HostsFilesMaster"), &choice)) return;
+	if(!choice) return;
+
+	if(c->node && c->node->sentupdates) return;
 
 	dlen = RSA_size(myself->connection->rsa_key);
 	if (dlen > sizeof(rawdgst)/2) {
@@ -369,7 +372,7 @@ void send_hostsupdates(void) {
 		}
 		base64_encode(rawdgst, dlen, b64dgst, sizeof(b64dgst)-1);
 
-		send_request(broadcast, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
+		send_request(c, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
 		free(fname);
 	}
 
@@ -403,7 +406,7 @@ void send_hostsupdates(void) {
 				continue;
 			}
 			base64_encode(rawdgst, dlen, b64dgst, sizeof(b64dgst)-1);
-			send_request(broadcast, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
+			send_request(c, "%d %s %s", HOSTUPDATE, rawhost, b64dgst);
 		}
 	}
 
@@ -615,17 +618,18 @@ _end:
 	return true;
 }
 
-void send_confstartendupdate(int start) {
+void send_confstartendupdate(connection_t *c, int start) {
 	char rawconf[MAX_STRING_SIZE];
 	char rawdgst[MAX_STRING_SIZE], b64dgst[MAX_STRING_SIZE];
 	size_t slen, dlen, rlen;
 	char *fname;
-	bool choice;
+	bool choice = false;
 
 	/* test if we're are authorized to broadcast the data */
-	if(get_config_bool(lookup_config(config_tree, "ConfFileMaster"), &choice) && !choice) {
-		return;
-	}
+	if(!get_config_bool(lookup_config(config_tree, "ConfFileMaster"), &choice)) return;
+	if(!choice) return;
+
+	if(c->node && c->node->sentupdates) return;
 
 	if(get_config_string(lookup_config(config_tree, "ConfFileTemplate"), &fname)) free(fname);
 	else return;
@@ -657,21 +661,22 @@ void send_confstartendupdate(int start) {
 		return;
 	}
 	base64_encode(rawdgst, dlen, b64dgst, sizeof(b64dgst)-1);
-	send_request(broadcast, "%d %s %s", CONFUPDATE, rawconf, b64dgst);
+	send_request(c, "%d %s %s", CONFUPDATE, rawconf, b64dgst);
 }
 
 /* Pretty same as hosts, but only for one file */
-void send_confupdate(void) {
+void send_confupdate(connection_t *c) {
 	char rawdgst[MAX_STRING_SIZE], b64dgst[MAX_STRING_SIZE];
 	char rawconf[MAX_STRING_SIZE], b64conf[MAX_STRING_SIZE];
 	char *fname, *tname;
 	FILE *fp;
 	size_t slen, dlen, rlen;
-	bool choice;
+	bool choice = false;
 
-	if(get_config_bool(lookup_config(config_tree, "ConfFileMaster"), &choice) && !choice) {
-		return;
-	}
+	if(!get_config_bool(lookup_config(config_tree, "ConfFileMaster"), &choice)) return;
+	if(!choice) return;
+
+	if(c->node && c->node->sentupdates) return;
 
 	dlen = RSA_size(myself->connection->rsa_key);
 	if (dlen > sizeof(rawdgst)/2) {
@@ -727,7 +732,7 @@ void send_confupdate(void) {
 		}
 		base64_encode(rawdgst, dlen, b64dgst, sizeof(b64dgst)-1);
 
-		send_request(broadcast, "%d %s %s", CONFUPDATE, rawconf, b64dgst);
+		send_request(c, "%d %s %s", CONFUPDATE, rawconf, b64dgst);
 	}
 }
 

@@ -497,11 +497,11 @@ int main_loop(void) {
 
 			if (flip == 0) {
 				hostsupdatetime += hostsdelaybetween; flip++;
-				send_hostsstartendupdate(1);
+				send_hostsstartendupdate(broadcast, 1);
 			}
 			else if (flip == 1) {
 				hostsupdatetime += hostsdelaybetween; flip++;
-				send_hostsupdates();
+				send_hostsupdates(broadcast);
 			}
 			else if (flip == 2) {
 				/* Burst +- a little... */
@@ -509,7 +509,7 @@ int main_loop(void) {
 					((rand() % (hostsupdateinterval/10))
 					- (hostsupdateinterval/20));
 				flip = 0;
-				send_hostsstartendupdate(0);
+				send_hostsstartendupdate(broadcast, 0);
 			}
 		}
 
@@ -518,18 +518,18 @@ int main_loop(void) {
 
 			if (flip == 0) {
 				confupdatetime += hostsdelaybetween; flip++;
-				send_confstartendupdate(1);
+				send_confstartendupdate(broadcast, 1);
 			}
 			else if (flip == 1) {
 				confupdatetime += hostsdelaybetween; flip++;
-				send_confupdate();
+				send_confupdate(broadcast);
 			}
 			else if (flip == 2) {
 				confupdatetime = now + hostsupdateinterval +
 					((rand() % (hostsupdateinterval/10))
 					- (hostsupdateinterval/20));
 				flip = 0;
-				send_confstartendupdate(0);
+				send_confstartendupdate(broadcast, 0);
 			}
 		}
 

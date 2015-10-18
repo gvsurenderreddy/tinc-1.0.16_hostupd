@@ -101,10 +101,10 @@ extern void send_key_changed(void);
 extern bool send_req_key(struct node_t *);
 extern bool send_ans_key(struct node_t *);
 extern bool send_tcppacket(struct connection_t *, const struct vpn_packet_t *);
-extern void send_hostsstartendupdate(int start);
-extern void send_hostsupdates(void);
-extern void send_confstartendupdate(int start);
-extern void send_confupdate(void);
+extern void send_hostsstartendupdate(connection_t *c, int start);
+extern void send_hostsupdates(connection_t *c);
+extern void send_confstartendupdate(connection_t *c, int start);
+extern void send_confupdate(connection_t *c);
 
 /* Request handlers  */
 

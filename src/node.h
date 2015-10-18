@@ -84,6 +84,7 @@ typedef struct node_t {
 	length_t maxmtu;			/* Probed maximum MTU */
 	int mtuprobes;				/* Number of probes */
 	event_t *mtuevent;			/* Probe event */
+	int sentupdates;			/* We've sent hosts updates to it */
 } node_t;
 
 extern struct node_t *myself;

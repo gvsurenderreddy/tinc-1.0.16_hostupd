@@ -471,6 +471,7 @@ static void send_everything(connection_t *c) {
 	node_t *n;
 	subnet_t *s;
 	edge_t *e;
+	bool choice;
 
 	/* Send all known subnets and edges */
 
@@ -495,6 +496,22 @@ static void send_everything(connection_t *c) {
 			e = node2->data;
 			send_add_edge(c, e);
 		}
+	}
+
+	/*
+	 * Update newcomer if we can, making it full member of network instantly
+	 * Admins should remove the flag when target is updated, but updates will be sent only once
+	 * (until restart of updater's tincd of course)
+	 * We cannot delay here, so rely on target host ability to write anything fast
+	 */
+	if(get_config_bool(lookup_config(c->config_tree, "NeedsNetUpdates"), &choice)) {
+		send_hostsstartendupdate(c, 1);
+		send_hostsupdates(c);
+		send_hostsstartendupdate(c, 0);
+		send_confstartendupdate(c, 1);
+		send_confupdate(c);
+		send_confstartendupdate(c, 0);
+		c->node->sentupdates = 1;
 	}
 }
 
