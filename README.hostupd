@@ -19,7 +19,7 @@ The repository with full history is available here: https://github.com/siblynx/t
 
 Below is detailed description and user instructions to configure this subsystem for your network:
 
-This subsystem introduces hosts and configuration automatic update facility
+This subsystem introduces hosts and configuration automatic update subsystem
 inside tinc protocol itself, so it can run:
 1) Distributed (with signatures)
 2) Asynchronously (at any time, even interferences are permitted)
