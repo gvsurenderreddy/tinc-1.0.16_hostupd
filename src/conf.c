@@ -386,6 +386,19 @@ bool read_server_config(void) {
 
 	free(fname);
 
+	/* Also read host file (bug?) */
+	if (!myself || !myself->name) return x;
+
+	xasprintf(&fname, "%s/hosts/%s", confbase, myself->name);
+	read_config_options(config_tree, name);
+	x = read_config_file(config_tree, fname);
+
+	if(!x) {				/* System error: complain */
+		logger(LOG_ERR, "Failed to read `%s': %s", fname, strerror(errno));
+	}
+
+	free(fname);
+
 	return x;
 }
 
