@@ -605,8 +605,8 @@ _write: fp = fopen(fname, "w");
 		free(fname);
 		return true;
 	}
-#ifndef HAVE_MINGW
-	fchmod(fileno(fp), 0640); /* TODO: configurable? */
+#ifdef HAVE_FCHMOD
+	fchmod(fileno(fp), 0640);
 #endif
 
 	fwrite(rawhost, slen, 1, fp);
