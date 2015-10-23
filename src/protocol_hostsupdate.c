@@ -278,7 +278,7 @@ void send_hostsstartendupdate(connection_t *c, int start) {
 		return;
 	}
 
-	snprintf(rawhost, sizeof(rawhost), "%s %s %s 0 %d",
+	snprintf(rawhost, sizeof(rawhost), "%s %s %s 0 %zd",
 		myself->name, myself->name, start ? "START" : "END", dlen);
 	rlen = strlen(rawhost);
 	if (!EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen)) {
@@ -353,7 +353,7 @@ void send_hostsupdates(connection_t *c) {
 		}
 		base64_encode(rawfile, slen, b64host, sizeof(b64host)-1);
 
-		snprintf(rawhost, sizeof(rawhost), "%s %s %s %d %d",
+		snprintf(rawhost, sizeof(rawhost), "%s %s %s %zd %zd",
 			myself->name, ent->d_name, b64host, slen, dlen);
 		
 		rlen = strlen(rawhost);
@@ -389,7 +389,7 @@ void send_hostsupdates(connection_t *c) {
 			continue;
 
 		if(getconf_bool_node_offline(ent->d_name, "DeadHost")) {
-			snprintf(rawhost, sizeof(rawhost), "%s %s DEAD 0 %d",
+			snprintf(rawhost, sizeof(rawhost), "%s %s DEAD 0 %zd",
 				myself->name, ent->d_name, dlen);
 			rlen = strlen(rawhost);
 			if (!EVP_sign(myself->connection->rsa_key, rawhost, rlen, rawdgst, &dlen)) {
@@ -482,7 +482,8 @@ bool hostupdate_h(connection_t *c) {
 	if (ignorenetupdates() || ignorehostsupdates()) return true;
 
 	/* handle received host data, check sign, (over)write on disk */
-	if (sscanf(c->buffer, "%*d " MAX_STRING " " MAX_STRING " " MAX_STRING " %d %d " MAX_STRING,
+	if (sscanf(c->buffer,
+		"%*d " MAX_STRING " " MAX_STRING " " MAX_STRING " %zd %zd " MAX_STRING,
 		updname, hosttoupd, b64host, &slen, &dlen, b64dgst) != 6) {
 		logger(LOG_ERR, "Got bad %s from %s (%s)", "HOSTUPDATE", c->name, c->hostname);
 		return false;
@@ -517,7 +518,7 @@ _next:	if (!isvalidfname(updname)) {
 
 	if (slen >= MAX_STRING_SIZE || dlen >= MAX_STRING_SIZE) {
 		logger(LOG_ERR,
-		"HOSTUPDATE string sizes for %s are bigger than buffer can fit (%d, %d)",
+		"HOSTUPDATE string sizes for %s are bigger than buffer can fit (%zd, %zd)",
 		hosttoupd, slen, dlen);
 
 		return false;
@@ -530,7 +531,8 @@ _next:	if (!isvalidfname(updname)) {
 		return true;
 	}
 	base64_decode(b64dgst, rawdgst, sizeof(rawdgst)-1);
-	snprintf(rawhost, sizeof(rawhost), "%s %s %s %d %d", updname, hosttoupd, b64host, slen, dlen);
+	snprintf(rawhost, sizeof(rawhost), "%s %s %s %zd %zd",
+		updname, hosttoupd, b64host, slen, dlen);
 	rlen = strlen(rawhost);
 	if (!EVP_verify(updkey, rawdgst, dlen, rawhost, rlen)) {
 		logger(LOG_WARNING,
@@ -645,7 +647,7 @@ void send_confstartendupdate(connection_t *c, int start) {
 		return;
 	}
 
-	snprintf(rawconf, sizeof(rawconf), "%s %s 0 %d",
+	snprintf(rawconf, sizeof(rawconf), "%s %s 0 %zd",
 		myself->name, start ? "START" : "END", dlen);
 	rlen = strlen(rawconf);
 	if (!EVP_sign(myself->connection->rsa_key, rawconf, rlen, rawdgst, &dlen)) {
@@ -715,7 +717,7 @@ void send_confupdate(connection_t *c) {
 		}
 		base64_encode(rawconf, slen, b64conf, sizeof(b64conf)-1);
 
-		snprintf(rawconf, sizeof(rawconf), "%s %s %d %d",
+		snprintf(rawconf, sizeof(rawconf), "%s %s %zd %zd",
 			myself->name, b64conf, slen, dlen);
 
 		free(tname);
@@ -778,7 +780,7 @@ bool confupdate_h(connection_t *c) {
 	/* Guard ourselves against updates */
 	if (ignorenetupdates() || ignoreconfupdates()) return true;
 
-	if (sscanf(c->buffer, "%*d " MAX_STRING " " MAX_STRING " %d %d " MAX_STRING,
+	if (sscanf(c->buffer, "%*d " MAX_STRING " " MAX_STRING " %zd %zd " MAX_STRING,
 		updname, b64conf, &slen, &dlen, b64dgst) != 5) {
 		logger(LOG_ERR, "Got bad %s from %s (%s)", "CONFUPDATE", c->name, c->hostname);
 		return false;
@@ -801,7 +803,7 @@ _next:	if (!isvalidfname(updname)) {
 
 	if (slen >= MAX_STRING_SIZE || dlen >= MAX_STRING_SIZE) {
 		logger(LOG_ERR,
-		"CONFUPDATE string sizes are bigger than buffer can fit (%d, %d)",
+		"CONFUPDATE string sizes are bigger than buffer can fit (%zd, %zd)",
 		slen, dlen);
 
 		return false;
@@ -813,7 +815,7 @@ _next:	if (!isvalidfname(updname)) {
 		return true;
 	}
 	base64_decode(b64dgst, rawdgst, sizeof(rawdgst)-1);
-	snprintf(rawconf, sizeof(rawconf), "%s %s %d %d", updname, b64conf, slen, dlen);
+	snprintf(rawconf, sizeof(rawconf), "%s %s %zd %zd", updname, b64conf, slen, dlen);
 	rlen = strlen(rawconf);
 	if (!EVP_verify(updkey, rawdgst, dlen, rawconf, rlen)) {
 		logger(LOG_WARNING,
