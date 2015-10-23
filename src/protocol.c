@@ -30,6 +30,7 @@
 
 bool tunnelserver = false;
 bool strictsubnets = false;
+bool exceptmasters = false;
 
 /* Jumptable for the request handlers */
 
@@ -121,7 +122,14 @@ void forward_request(connection_t *from) {
 
 	from->buffer[from->reqlen - 1] = '\n';
 
-	broadcast_meta(from, from->buffer, from->reqlen);
+	/* A (maybe) crude hack: don't flood update masters by sending them forwards */
+	if (exceptmasters) {
+		exceptmasters = false;
+		broadcast_meta_exceptmasters(from, from->buffer, from->reqlen);
+	}
+	else {
+		broadcast_meta(from, from->buffer, from->reqlen);
+	}
 }
 
 bool receive_request(connection_t *c) {

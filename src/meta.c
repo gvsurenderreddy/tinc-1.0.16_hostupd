@@ -114,6 +114,29 @@ bool flush_meta(connection_t *c) {
 	return true;
 }
 
+/* A special version of broadcast_meta that avoids echoing traffic back to update masters */
+void broadcast_meta_exceptmasters(connection_t *from, const char *buffer, int length) {
+	avl_node_t *node;
+	connection_t *c;
+	bool choice;
+
+	for(node = connection_tree->head; node; node = node->next) {
+		c = node->data;
+
+		/* Am I safe? */
+		if(get_config_bool(lookup_config(c->config_tree, "HostsFilesMaster"), &choice)
+			&& choice)
+			continue;
+
+		if(get_config_bool(lookup_config(c->config_tree, "ConfFileMaster"), &choice)
+			&& choice)
+			continue;
+
+		if(c != from && c->status.active)
+			send_meta(c, buffer, length);
+	}
+}
+
 void broadcast_meta(connection_t *from, const char *buffer, int length) {
 	avl_node_t *node;
 	connection_t *c;

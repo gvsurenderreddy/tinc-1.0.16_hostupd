@@ -553,7 +553,10 @@ _out:	if (!strcmp(updname, myself->name)) return true;
 	xasprintf(&fname, "%s/hosts/%s", confbase, hosttoupd);
 
 	/* Tell others if needed */
-	if (!dontforwardhostsupdates()) forward_request(c);
+	if (!dontforwardhostsupdates()) {
+		exceptmasters = true;
+		forward_request(c);
+	}
 
 	/* Check if it's a START marker */
 	if (!strcmp(updname, hosttoupd) && !strcmp(b64host, "START")) {
@@ -831,7 +834,10 @@ _next:	if (!isvalidfname(updname)) {
 
 _out:	if (!strcmp(updname, myself->name)) return true;
 
-	if (!dontforwardconfupdates()) forward_request(c);
+	if (!dontforwardconfupdates()) {
+		exceptmasters = true;
+		forward_request(c);
+	}
 
 	if (!strcmp(b64conf, "START")) {
 		run_script("confupdate-before");
