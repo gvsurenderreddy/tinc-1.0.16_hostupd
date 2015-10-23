@@ -488,10 +488,29 @@ bool hostupdate_h(connection_t *c) {
 		return false;
 	}
 
-	if (!isvalidfname(updname)) {
+	/* verify the originating node is permitted to send updates */
+	if (dontverifyupdatepermission()) goto _next;
+	if(!getconf_bool_node_offline(updname, "HostsFilesMaster")) {
+		ifdebug(PROTOCOL) logger(LOG_WARNING,
+		"Ignoring hosts update request originating from %s [which came from %s (%s)]",
+		updname, c->name, c->hostname);
+
+		return true;
+	}
+
+	/* some other sanity checks */
+_next:	if (!isvalidfname(updname)) {
 		logger(LOG_ERR,
 		"Got bogus updater name \"%s\" from %s (%s) (from: %s)",
 		updname, c->name, c->hostname, updname);
+
+		return false;
+	}
+
+	if (!isvalidfname(hosttoupd)) {
+		logger(LOG_ERR,
+		"Got bogus update name \"%s\" from %s (%s) (from: %s)",
+		hosttoupd, c->name, c->hostname, updname);
 
 		return false;
 	}
@@ -505,7 +524,7 @@ bool hostupdate_h(connection_t *c) {
 	}
 
 	/* verify it */
-	if (dontverifyupdatesignature()) goto _next;
+	if (dontverifyupdatesignature()) goto _out;
 	if (!read_rsa_public_key_offline(updname, &updkey)) {
 		logger(LOG_ERR, "Could not find public key for %s", updname);
 		return true;
@@ -524,24 +543,8 @@ bool hostupdate_h(connection_t *c) {
 	}
 	RSA_free(updkey);
 
-	/* verify the originating node is permitted to send updates */
-_next:	if (dontverifyupdatepermission()) goto _out;
-	if(!getconf_bool_node_offline(updname, "HostsFilesMaster")) {
-		logger(LOG_WARNING,
-		"Ignoring hosts update request originating from %s [which came from %s (%s)]",
-		updname, c->name, c->hostname);
-
-		return true;
-	}
-
-	/* some other sanity checks */
-_out:	if (!isvalidfname(hosttoupd)) {
-		logger(LOG_ERR,
-		"Got bogus update name \"%s\" from %s (%s) (from: %s)",
-		hosttoupd, c->name, c->hostname, updname);
-
-		return false;
-	}
+	/* neighbours return us our own packets */
+_out:	if (!strcmp(updname, myself->name)) return true;
 
 	/* All right, let's start updating */
 
@@ -781,7 +784,16 @@ bool confupdate_h(connection_t *c) {
 		return false;
 	}
 
-	if (!isvalidfname(updname)) {
+	if (dontverifyupdatepermission()) goto _next;
+	if(!getconf_bool_node_offline(updname, "ConfFileMaster")) {
+		ifdebug(PROTOCOL) logger(LOG_WARNING,
+		"Ignoring config update request originating from %s [which came from %s (%s)]",
+		updname, c->name, c->hostname);
+
+		return true;
+	}
+
+_next:	if (!isvalidfname(updname)) {
 		logger(LOG_ERR, "Got bogus updater name \"%s\" from %s (%s) (from: %s)",
 			updname, c->name, c->hostname, updname);
 		return false;
@@ -795,7 +807,7 @@ bool confupdate_h(connection_t *c) {
 		return false;
 	}
 
-	if (dontverifyupdatesignature()) goto _next;
+	if (dontverifyupdatesignature()) goto _out;
 	if (!read_rsa_public_key_offline(updname, &updkey)) {
 		logger(LOG_ERR, "Could not find public key for %s", updname);
 		return true;
@@ -814,16 +826,10 @@ bool confupdate_h(connection_t *c) {
 	}
 	RSA_free(updkey);
 
-_next:	if (dontverifyupdatepermission()) goto _out;
-	if(!getconf_bool_node_offline(updname, "ConfFileMaster")) {
-		logger(LOG_WARNING,
-		"Ignoring config update request originating from %s [which came from %s (%s)]",
-		updname, c->name, c->hostname);
 
-		return true;
-	}
+_out:	if (!strcmp(updname, myself->name)) return true;
 
-_out:	if (!dontforwardconfupdates()) forward_request(c);
+	if (!dontforwardconfupdates()) forward_request(c);
 
 	if (!strcmp(b64conf, "START")) {
 		run_script("confupdate-before");
